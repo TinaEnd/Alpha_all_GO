@@ -1,0 +1,322 @@
+---
+title: "worldmapping_2"
+author: "Tina Enders"
+date: "13/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Host and symbiont location
+
+This is an R Markdown document to display the sampling locations of all used gutless oligochaetes for the diversity project along with their symbionts.  
+Code annotation was changed for readibility, code was not changed.  
+Current date: 13.05.2022  
+Status of the sample set: complete  
+Reason for this mapping: first project of PhD thesis
+  
+### Load libraries
+
+```{r set_env, message = FALSE, warning = FALSE}
+options(repos='http://cran.rstudio.com/')
+
+#needed
+#install.packages('seqinr')
+#install.packages('plotly')
+
+library(ggplot2)
+library(plotly)
+library(ggplot2)
+library(maps)
+library(mapdata)
+library(seqinr)
+library(tidyr)
+library(reshape2)
+
+##potential, delete unused later
+#install.packages('maps')
+#install.packages('tidyr')
+#install.packages('mapproj')
+#install.packages('viridis')
+#install.packages('listviewer')
+#install.packages('caTools')
+#library(maps)
+#library(sp)
+#library(dplyr)
+#library(stringr)
+#library(mapproj)
+#library(viridis)
+#library(listviewer)
+#library(caTools)
+```
+
+###Load sample data  
+Load metdadata table and symbiont table to be able to combine info later.
+
+
+```{r, results = 'hide'}
+setwd("D:/Seafile/HomeOffice/alpha.all/worldmaps/")
+mdata_raw <- read.table("metadata_gutless-oligochaetes.csv", sep = ";", header = T)
+sdata <- read.fasta("all.16S.emirge.no-contamination.longerthan1000.fasta")
+keep <- read.table("233_samples.txt", header = T)
+mdata <- merge(keep, mdata_raw, by = "lib")
+
+###colour schemes
+colsymb=c("Alpha1"="#660000", "Alpha2"="#FF6633", "Alpha3"="#993300", "Alpha4"="#FF9999",
+                             "Alpha5"="#CC3300", "Alpha6"="#FF9966", "Alpha7"="#CC0066", "Alpha8"="#FF0066", 
+                             "Alpha9"="#FF0033", "Alpha10"="#FF6600", "Alpha12"="#993333", "Alpha13"="#FF9900", 
+                             "Alpha14"="#FFCC99", "Alpha15"="#FF3333", "Alpha16"="#FF3300", "Delta1"="#6699FF", 
+                             "Delta2"="#CCFFFF", "Delta3"="#00FFFF", "Delta4"="#00CCFF", "Delta5"="#006699", 
+                             "Delta8"="#0000FF", "Delta11"="#669999","Delta12"="#0099CC", "Delta13"="#000066", 
+                             "Delta14"="#660099", "Gamma1"="#339933", "Gamma2"="#00FF00", "Gamma3"="#336633", 
+                             "Gamma4"="#99FF99", "Gamma4a"="#CCFFCC", "Gamma5"="#009966", "Gamma6"="#00FF99", 
+                             "Gamma7"="#999900", "Gamma8"="#CCCC99", "Spiro1"="#FF00FF", "Actinomarinales1"="#FFFF66",
+                             "Marinimicrobia1"="#FFFF99")
+```
+### Load world data
+```{r}
+world <- map_data("world")
+```
+###Plot sampling sites
+```{r}
+sites <- ggplot() +
+  geom_polygon(data = world, aes(x=long, y = lat, group = group) , fill="grey")+
+    theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        panel.border=element_blank()) +
+  theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())+
+  geom_point(data=mdata, aes(x=longitude, y=latitude, color=ocean), size=3)
+  #scale_size_continuous(range=c(1,12)) +
+  #theme_void() 
+
+plot(sites)
+ggplotly(sites)
+```
+##Merge symbiont and metadata
+```{r}
+symbionts<-data.frame(names(sdata)) #get fasta headers
+symsep<-separate(data = symbionts, col = names.sdata., into = c("lib", "symbiont"), sep = "\\.") # separate fasta header by lib and symbiont
+msdata<-merge(mdata,symsep,by="lib") #merge symbiont and metadata
+msdata$clade <- substr(msdata$symbiont, 0, 3)
+
+```
+##Plot symbionts
+```{r}
+sloc <- ggplot() +
+  geom_polygon(data = world, aes(x=long, y = lat, group = group) , fill="grey")+
+    theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        panel.border=element_blank()) +
+  theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())+
+  geom_point(data=msdata, aes(x=longitude, y=latitude, color=symbiont), size=3)
+  #scale_size_continuous(range=c(1,12)) +
+  #theme_void() 
+
+plot(sloc)
+ggplotly(sloc)
+```
+
+##Where are the symbionts?
+```{r}
+#which symbionts to keep
+#msdata <- msdata[grep("Alpha", msdata$symbiont), ] #choose symbiont clade to plot
+
+Aloc <- ggplot() +
+  geom_polygon(data = world, aes(x=long, y = lat, group = group) , color = "grey", fill="grey")+
+    theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        panel.border=element_blank()) +
+  #theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())+
+  geom_point(data=mdata, aes(x=longitude, y=latitude), size=3)+
+  geom_point(data=msdata, aes(x=longitude, y=latitude,color = symbiont), size=3)+
+  #geom_point(data=msdata, aes(x=longitude, y=latitude,color = symbiont), size=3, color ="#CC1F1B")+ #enable when all should have the same colour
+  scale_colour_manual(values=colsymb) 
+
+plot(Aloc)
+ggplotly(Aloc)
+```
+
+
+```{r, eval=FALSE}
+loc <- ggplot() +
+  geom_polygon(data = world, aes(x=long, y = lat, group = group) , color = "grey", fill="grey")+
+    theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        panel.border=element_blank()) +
+  #theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())+
+  geom_point(data=msdata, aes(x=longitude, y=latitude), size=2)+
+  geom_point(data=msdata, aes(x=longitude, y=latitude,color = symbiont), size=2)+
+  scale_colour_manual(values=colsymb) +
+  facet_wrap(~symbiont)
+
+
+plot(loc)
+ggplotly(loc)
+```
+##Where are the hosts?
+```{r}
+hloc <- ggplot() +
+  geom_polygon(data = world, aes(x=long, y = lat, group = group) , color = "grey", fill="grey")+
+    theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        panel.border=element_blank()) +
+  #theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())+
+  geom_point(data=mdata, aes(x=longitude, y=latitude), size=3)+
+  geom_point(data=mdata, aes(x=longitude, y=latitude, color = host_species), size=1, position = position_jitter(width = 3, height = 3))
+  
+plot(hloc)
+ggplotly(hloc)
+```
+
+
+```{r, eval=FALSE}
+hlocf <- ggplot() +
+  geom_polygon(data = world, aes(x=long, y = lat, group = group) , color = "grey", fill="grey")+
+    theme_bw() +
+  theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
+        panel.border=element_blank()) +
+  #theme(axis.title=element_blank(), axis.text=element_blank(), axis.ticks=element_blank())+
+  #geom_point(data=mdata, aes(x=longitude, y=latitude), size=3)+
+  geom_point(data=mdata, aes(x=longitude, y=latitude,color = host_species), size=3)+
+  facet_wrap(~host_species)
+
+plot(hlocf)
+#ggplotly(hlocf)
+```
+###What species do we have?
+```{r}
+host1 <-  ggplot(mdata, aes(fill=country, x=forcats::fct_infreq(host_species), group = country)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3, size = 6))
+  
+
+plot(host1)
+#ggplotly(host)
+
+
+host2 <-  ggplot(mdata, aes(fill=host_species, x=forcats::fct_infreq(country), group = host_species)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3, size = 6))
+  
+
+plot(host2)
+ggplotly(host2)
+
+new_data<- unique(select(mdata,host_species,ocean, country))
+host3 <-  ggplot(new_data, aes(fill=host_species, x=forcats::fct_infreq(country))) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3, size = 6))
+  
+
+plot(host3)
+ggplotly(host3)
+
+```
+###Where are our symbionts?
+```{r}
+
+
+country <-  ggplot(msdata, aes(fill=symbiont, forcats::fct_infreq(ocean), group = symbiont)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))+
+  scale_fill_manual(values=colsymb)
+  
+  
+plot(country)
+#ggplotly(country)
+
+
+
+new_data<- unique(select(msdata,host_species,ocean, country,island_city, symbiont))
+country2 <-  ggplot(new_data, aes(fill=symbiont, forcats::fct_infreq(ocean), group = symbiont)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))+
+  scale_fill_manual(values=colsymb)
+  
+  
+plot(country2)
+#ggplotly(country)
+
+new_data<- unique(select(msdata,host_species,ocean, country, island_city, symbiont))
+island <-  ggplot(new_data, aes(fill=symbiont, forcats::fct_infreq(country), group = symbiont)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))+
+  scale_fill_manual(values=colsymb)
+  
+  
+plot(island)
+#ggplotly(country)
+
+```
+
+
+```{r}
+
+country1 <-  ggplot(msdata, aes(fill=symbiont, forcats::fct_infreq(country), group = symbiont)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))+
+  scale_fill_manual(values=colsymb)
+  
+  
+plot(country1)
+
+
+new_data<- unique(select(msdata,host_species, country, island_city, symbiont))
+country <-  ggplot(new_data, aes(fill=symbiont, forcats::fct_infreq(country), group = symbiont)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))+
+  scale_fill_manual(values=colsymb)
+  
+  
+plot(country)
+#ggplotly(country)
+```
+
+
+```{r}
+
+country <-  ggplot(msdata, aes(fill=ocean, forcats::fct_infreq(symbiont), group = ocean)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))
+  
+plot(country)
+#ggplotly(country)
+```
+
+```{r}
+
+new_data<- unique(select(msdata,host_species, country, island_city, symbiont))
+sabu <-  ggplot(new_data, aes(forcats::fct_infreq(symbiont),fill=factor(symbiont))) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))+
+  scale_fill_manual(values=colsymb)
+  
+plot(sabu)
+#ggplotly(country)
+```
+
+
+```{r}
+
+country <-  ggplot(msdata, aes(fill=country, forcats::fct_infreq(symbiont), group = country)) + 
+  geom_bar(position="stack", stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))
+  
+  
+plot(country)
+#ggplotly(country)
+```
+
+### Where do our samples come from?
+```{r}
+countryh <-  ggplot(mdata, aes(fill=host_species, forcats::fct_infreq(country), group = host_species)) + 
+  geom_bar(stat="count")+
+theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.3))
+  
+  
+plot(countryh)
+#ggplotly(countryh)
+```
+
